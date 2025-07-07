@@ -50,6 +50,7 @@
 #include "shammodels/sph/modules/UpdateDerivs.hpp"
 #include "shammodels/sph/modules/UpdateViscosity.hpp"
 #include "shammodels/sph/modules/io/VTKDump.hpp"
+#include "shammodels/sph/solvergraph/NeighCache.hpp"
 #include "shamphys/mhd.hpp"
 #include "shamrock/patch/Patch.hpp"
 #include "shamrock/patch/PatchData.hpp"
@@ -66,6 +67,12 @@
 #include <memory>
 #include <stdexcept>
 #include <vector>
+
+template<class Tvec, template<class> class Kern>
+void shammodels::sph::Solver<Tvec, Kern>::init_solver_graph() {
+    storage.neigh_cache
+        = std::make_shared<shammodels::sph::solvergraph::NeighCache>("neigh_cache", "neigh");
+}
 
 template<class Tvec, template<class> class Kern>
 void shammodels::sph::Solver<Tvec, Kern>::vtk_do_dump(
@@ -249,7 +256,7 @@ void shammodels::sph::Solver<Tvec, Kern>::apply_position_boundary(Tscal time_val
 
     StackEntry stack_loc{};
 
-    logger::debug_ln("SphSolver", "apply position boundary");
+    shamlog_debug_ln("SphSolver", "apply position boundary");
 
     PatchScheduler &sched = scheduler();
 
@@ -358,7 +365,7 @@ void shammodels::sph::Solver<Tvec, Kern>::do_predictor_leapfrog(Tscal dt) {
     shamrock::SchedulerUtility utility(scheduler());
 
     // forward euler step f dt/2
-    logger::debug_ln("sph::BasicGas", "forward euler step f dt/2");
+    shamlog_debug_ln("sph::BasicGas", "forward euler step f dt/2");
     utility.fields_forward_euler<Tvec>(ivxyz, iaxyz, dt / 2);
     utility.fields_forward_euler<Tscal>(iuint, iduint, dt / 2);
 
@@ -370,11 +377,11 @@ void shammodels::sph::Solver<Tvec, Kern>::do_predictor_leapfrog(Tscal dt) {
     }
 
     // forward euler step positions dt
-    logger::debug_ln("sph::BasicGas", "forward euler step positions dt");
+    shamlog_debug_ln("sph::BasicGas", "forward euler step positions dt");
     utility.fields_forward_euler<Tvec>(ixyz, ivxyz, dt);
 
     // forward euler step f dt/2
-    logger::debug_ln("sph::BasicGas", "forward euler step f dt/2");
+    shamlog_debug_ln("sph::BasicGas", "forward euler step f dt/2");
     utility.fields_forward_euler<Tvec>(ivxyz, iaxyz, dt / 2);
     utility.fields_forward_euler<Tscal>(iuint, iduint, dt / 2);
 
@@ -440,7 +447,7 @@ void shammodels::sph::Solver<Tvec, Kern>::sph_prestep(Tscal time_val, Tscal dt) 
             NamedStackEntry stack_loc2{"iterate smoothing length"};
             // iterate smoothing length
             scheduler().for_each_patchdata_nonempty([&](const Patch p, PatchData &pdat) {
-                logger::debug_ln("SPHLeapfrog", "patch : n°", p.id_patch, "->", "h iteration");
+                shamlog_debug_ln("SPHLeapfrog", "patch : n°", p.id_patch, "->", "h iteration");
 
                 sham::DeviceBuffer<Tscal> &eps_h = _epsilon_h.get_buf(p.id_patch);
                 sham::DeviceBuffer<Tscal> &hold  = _h_old.get_buf(p.id_patch);
@@ -454,7 +461,7 @@ void shammodels::sph::Solver<Tvec, Kern>::sph_prestep(Tscal time_val, Tscal dt) 
                 RTree &tree = storage.merged_pos_trees.get().get(p.id_patch);
 
                 tree::ObjectCache &neigh_cache
-                    = storage.neighbors_cache.get().get_cache(p.id_patch);
+                    = shambase::get_check_ref(storage.neigh_cache).get_cache(p.id_patch);
 
                 sph_utils.iterate_smoothing_length_cache(
                     merged_r,
@@ -471,7 +478,7 @@ void shammodels::sph::Solver<Tvec, Kern>::sph_prestep(Tscal time_val, Tscal dt) 
             });
             max_eps_h = _epsilon_h.compute_rank_max();
 
-            logger::debug_ln("Smoothinglength", "iteration :", iter_h, "epsmax", max_eps_h);
+            shamlog_debug_ln("Smoothinglength", "iteration :", iter_h, "epsmax", max_eps_h);
 
             if (max_eps_h < solver_config.epsilon_h) {
                 logger::debug_sycl("Smoothinglength", "converged at i =", iter_h);
@@ -622,7 +629,7 @@ void shammodels::sph::Solver<Tvec, Kern>::start_neighbors_cache() {
 
 template<class Tvec, template<class> class Kern>
 void shammodels::sph::Solver<Tvec, Kern>::reset_neighbors_cache() {
-    storage.neighbors_cache.reset();
+    // storage.neighbors_cache.reset();
 }
 
 template<class Tvec, template<class> class Kern>
@@ -904,7 +911,7 @@ void shammodels::sph::Solver<Tvec, Kern>::prepare_corrector() {
     const u32 idB_on_rho  = (has_B_field) ? pdl.get_field_idx<Tvec>("dB/rho") : 0;
     const u32 idpsi_on_ch = (has_psi_field) ? pdl.get_field_idx<Tscal>("dpsi/ch") : 0;
 
-    logger::debug_ln("sph::BasicGas", "save old fields");
+    shamlog_debug_ln("sph::BasicGas", "save old fields");
     storage.old_axyz.set(utility.save_field<Tvec>(iaxyz, "axyz_old"));
     storage.old_duint.set(utility.save_field<Tscal>(iduint, "duint_old"));
 
@@ -1194,7 +1201,7 @@ shammodels::sph::TimestepLog shammodels::sph::Solver<Tvec, Kern>::evolve_once() 
         }
 
         // compute force
-        logger::debug_ln("sph::BasicGas", "compute force");
+        shamlog_debug_ln("sph::BasicGas", "compute force");
 
         // save old acceleration
         prepare_corrector();
@@ -1210,7 +1217,7 @@ shammodels::sph::TimestepLog shammodels::sph::Solver<Tvec, Kern>::evolve_once() 
             = utility.make_compute_field<Tscal>("umean epsilon_u^2", 1);
 
         // corrector
-        logger::debug_ln("sph::BasicGas", "leapfrog corrector");
+        shamlog_debug_ln("sph::BasicGas", "leapfrog corrector");
         utility.fields_leapfrog_corrector<Tvec>(
             ivxyz, iaxyz, storage.old_axyz.get(), vepsilon_v_sq, dt / 2);
         utility.fields_leapfrog_corrector<Tscal>(
@@ -1279,7 +1286,7 @@ shammodels::sph::TimestepLog shammodels::sph::Solver<Tvec, Kern>::evolve_once() 
 
         Tscal eps_v = shamalgs::collective::allreduce_max(rank_eps_v);
 
-        logger::debug_ln("BasicGas", "epsilon v :", eps_v);
+        shamlog_debug_ln("BasicGas", "epsilon v :", eps_v);
 
         if (eps_v > 1e-2) {
             if (shamcomm::world_rank() == 0) {
@@ -1332,7 +1339,7 @@ shammodels::sph::TimestepLog shammodels::sph::Solver<Tvec, Kern>::evolve_once() 
                 });
             }
 
-            logger::debug_ln("BasicGas", "computing next CFL");
+            shamlog_debug_ln("BasicGas", "computing next CFL");
 
             ComputeField<Tscal> vsig_max_dt = utility.make_compute_field<Tscal>("vsig_a", 1);
             std::unique_ptr<ComputeField<Tscal>> vclean_dt;
@@ -1363,7 +1370,8 @@ shammodels::sph::TimestepLog shammodels::sph::Solver<Tvec, Kern>::evolve_once() 
 
                 sycl::range range_npart{pdat.get_obj_cnt()};
 
-                tree::ObjectCache &pcache = storage.neighbors_cache.get().get_cache(cur_p.id_patch);
+                tree::ObjectCache &pcache
+                    = shambase::get_check_ref(storage.neigh_cache).get_cache(cur_p.id_patch);
 
                 /////////////////////////////////////////////
 
@@ -1575,7 +1583,7 @@ shammodels::sph::TimestepLog shammodels::sph::Solver<Tvec, Kern>::evolve_once() 
 
             Tscal rank_dt = cfl_dt.compute_rank_min();
 
-            logger::debug_ln("BasigGas", "rank", shamcomm::world_rank(), "found cfl dt =", rank_dt);
+            shamlog_debug_ln("BasigGas", "rank", shamcomm::world_rank(), "found cfl dt =", rank_dt);
 
             next_cfl = shamalgs::collective::allreduce_min(rank_dt);
 
@@ -1687,6 +1695,8 @@ shammodels::sph::TimestepLog shammodels::sph::Solver<Tvec, Kern>::evolve_once() 
     clear_ghost_cache();
     reset_presteps_rint();
     reset_neighbors_cache();
+
+    shambase::get_check_ref(storage.neigh_cache).free_alloc();
 
     solver_config.set_next_dt(next_cfl);
     solver_config.set_time(t_current + dt);
