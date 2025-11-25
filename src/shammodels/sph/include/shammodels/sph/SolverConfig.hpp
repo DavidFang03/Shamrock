@@ -13,6 +13,7 @@
  * @file SolverConfig.hpp
  * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @author Yona Lapeyre (yona.lapeyre@ens-lyon.fr)
+ * @author David Fang (david.fang@ikmail.com)
  * @brief
  *
  */
@@ -672,6 +673,17 @@ struct shammodels::sph::SolverConfig {
      */
     inline void add_ext_force_point_mass(Tscal central_mass, Tscal Racc) {
         ext_force_config.add_point_mass(central_mass, Racc);
+    }
+
+    /**
+     * @brief For a sphere: fictitious potential to counter pressure, for a density in \rho(r) =
+     * \rho_0 / r^2
+     *
+     * @param[in] rho_0 The mass of the central object
+     * @param[in] rmin Internal radius of the sphere
+     */
+    inline void add_ext_force_anti_pressure_r2(Tscal rho_0, Tscal rmin) {
+        ext_force_config.add_ext_force_anti_pressure_r2(rho_0, rmin);
     }
 
     /**

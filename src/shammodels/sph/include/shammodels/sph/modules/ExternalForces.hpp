@@ -12,6 +12,7 @@
 /**
  * @file ExternalForces.hpp
  * @author Timothée David--Cléris (tim.shamrock@proton.me)
+ * @author David Fang (david.fang@ikmail.com)
  * @brief
  *
  */
@@ -59,6 +60,7 @@ namespace shammodels::sph::modules {
         private:
         using SolverConfigExtForce = typename Config::ExtForceConfig;
         using EF_PointMass         = typename SolverConfigExtForce::PointMass;
+        using EF_AntiPressurer2    = typename SolverConfigExtForce::AntiPressurer2;
         using EF_LenseThirring     = typename SolverConfigExtForce::LenseThirring;
         using EF_ShearingBoxForce  = typename SolverConfigExtForce::ShearingBoxForce;
 

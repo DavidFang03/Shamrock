@@ -12,6 +12,7 @@
 /**
  * @file ExtForceConfig.hpp
  * @author Timothée David--Cléris (tim.shamrock@proton.me)
+ * @author David Fang (david.fang@ikmail.com)
  * @brief
  *
  */
@@ -44,6 +45,11 @@ namespace shammodels {
             Tvec dir_spin;
         };
 
+        struct AntiPressurer2 {
+            Tscal rho_0;
+            Tscal rmin;
+        };
+
         /**
          * \brief Shearing box forces as in athena
          * \cite Stone2010_shear_box
@@ -68,7 +74,8 @@ namespace shammodels {
                 : shear_base(shear_base), shear_dir(shear_dir), Omega_0(Omega_0), eta(eta), q(q) {};
         };
 
-        using VariantForce = std::variant<PointMass, LenseThirring, ShearingBoxForce>;
+        using VariantForce
+            = std::variant<PointMass, AntiPressurer2, LenseThirring, ShearingBoxForce>;
         VariantForce val;
     };
 
@@ -79,15 +86,21 @@ namespace shammodels {
         static constexpr u32 dim = shambase::VectorProperties<Tvec>::dimension;
 
         using PointMass        = typename ExtForceVariant<Tvec>::PointMass;
+        using AntiPressurer2   = typename ExtForceVariant<Tvec>::AntiPressurer2;
         using LenseThirring    = typename ExtForceVariant<Tvec>::LenseThirring;
         using ShearingBoxForce = typename ExtForceVariant<Tvec>::ShearingBoxForce;
 
-        using VariantForce = std::variant<PointMass, LenseThirring, ShearingBoxForce>;
+        using VariantForce
+            = std::variant<PointMass, AntiPressurer2, LenseThirring, ShearingBoxForce>;
 
         std::vector<ExtForceVariant<Tvec>> ext_forces;
 
         inline void add_point_mass(Tscal central_mass, Tscal Racc) {
             ext_forces.push_back(ExtForceVariant<Tvec>{PointMass{central_mass, Racc}});
+        }
+
+        inline void add_ext_force_anti_pressure_r2(Tscal rho_0, Tscal rmin) {
+            ext_forces.push_back(ExtForceVariant<Tvec>{AntiPressurer2{rho_0, rmin}});
         }
 
         inline void add_lense_thirring(
@@ -118,12 +131,15 @@ namespace shammodels {
         using T = ExtForceVariant<Tvec>;
 
         using PointMass        = typename T::PointMass;
+        using AntiPressurer2   = typename ExtForceVariant<Tvec>::AntiPressurer2;
         using LenseThirring    = typename T::LenseThirring;
         using ShearingBoxForce = typename T::ShearingBoxForce;
 
         if (const PointMass *v = std::get_if<PointMass>(&p.val)) {
             j = {
                 {"force_type", "point_mass"}, {"central_mass", v->central_mass}, {"Racc", v->Racc}};
+        } else if (const AntiPressurer2 *v = std::get_if<AntiPressurer2>(&p.val)) {
+            j = {{"force_type", "anti_pressure_r2"}, {"rho_0", v->rho_0}, {"rmin", v->rmin}};
         } else if (const LenseThirring *v = std::get_if<LenseThirring>(&p.val)) {
             j = {
                 {"force_type", "lense_thirring"},
@@ -159,6 +175,7 @@ namespace shammodels {
         j.at("force_type").get_to(force_type);
 
         using PointMass        = typename T::PointMass;
+        using AntiPressurer2   = typename T::AntiPressurer2;
         using LenseThirring    = typename T::LenseThirring;
         using ShearingBoxForce = typename T::ShearingBoxForce;
 
@@ -166,6 +183,12 @@ namespace shammodels {
             p.val = PointMass{
                 j.at("central_mass").get<Tscal>(),
                 j.at("Racc").get<Tscal>(),
+            };
+        }
+        if (force_type == "anti_pressure_r2") {
+            p.val = AntiPressurer2{
+                j.at("rho_0").get<Tscal>(),
+                j.at("rmin").get<Tscal>(),
             };
         } else if (force_type == "lense_thirring") {
             p.val = LenseThirring{
