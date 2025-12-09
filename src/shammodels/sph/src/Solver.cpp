@@ -846,6 +846,7 @@ void shammodels::sph::Solver<Tvec, Kern>::communicate_merge_ghosts_fields() {
     const u32 iuint           = pdl.get_field_idx<Tscal>("uint");
     const u32 iduint          = pdl.get_field_idx<Tscal>("duint");
     const u32 ihpart          = pdl.get_field_idx<Tscal>("hpart");
+    const u32 ipressure       = pdl.get_field_idx<Tscal>("pressure");
 
     const u32 ialpha_AV   = (has_alphaAV_field) ? pdl.get_field_idx<Tscal>("alpha_AV") : 0;
     const u32 isoundspeed = (has_soundspeed_field) ? pdl.get_field_idx<Tscal>("soundspeed") : 0;
@@ -1266,6 +1267,7 @@ shammodels::sph::TimestepLog shammodels::sph::Solver<Tvec, Kern>::evolve_once() 
     const u32 iuint       = pdl.get_field_idx<Tscal>("uint");
     const u32 iduint      = pdl.get_field_idx<Tscal>("duint");
     const u32 ihpart      = pdl.get_field_idx<Tscal>("hpart");
+    const u32 ipressure   = pdl.get_field_idx<Tscal>("pressure");
     const u32 iB_on_rho   = (has_B_field) ? pdl.get_field_idx<Tvec>("B/rho") : 0;
     const u32 idB_on_rho  = (has_B_field) ? pdl.get_field_idx<Tvec>("dB/rho") : 0;
     const u32 ipsi_on_ch  = (has_psi_field) ? pdl.get_field_idx<Tscal>("psi/ch") : 0;
@@ -2117,7 +2119,33 @@ shammodels::sph::TimestepLog shammodels::sph::Solver<Tvec, Kern>::evolve_once() 
                     buf_cs.complete_event_state(e);
                 });
             }
+            // copy pressure into patch field so host/collect_data sees it
+            {
+                const u32 ipressure = pdl.get_field_idx<Tscal>("pressure");
 
+                scheduler().for_each_patchdata_nonempty([&](Patch cur_p, PatchDataLayer &pdat) {
+                    sham::DeviceBuffer<Tscal> &buf_p_dst = pdat.get_field_buf_ref<Tscal>(ipressure);
+                    sham::DeviceBuffer<Tscal> &buf_p_src = shambase::get_check_ref(storage.pressure)
+                                                               .get_field(cur_p.id_patch)
+                                                               .get_buf();
+
+                    auto &q = shamsys::instance::get_compute_scheduler().get_queue();
+                    sham::EventList depends_list;
+
+                    auto p_src = buf_p_src.get_read_access(depends_list);
+                    auto p_dst = buf_p_dst.get_write_access(depends_list);
+
+                    auto e = q.submit(depends_list, [&](sycl::handler &cgh) {
+                        cgh.parallel_for(
+                            sycl::range<1>{pdat.get_obj_cnt()}, [=](sycl::item<1> item) {
+                                p_dst[item] = p_src[item];
+                            });
+                    });
+
+                    buf_p_src.complete_event_state(e);
+                    buf_p_dst.complete_event_state(e);
+                });
+            }
         } // if (!need_rerun_corrector) {
 
         corrector_iter_cnt++;
