@@ -442,9 +442,10 @@ void add_instance(py::module &m, std::string name_config, std::string name_model
                std::string system,
                std::string axis,
                Tvec box_min,
-               Tvec box_max) {
+               Tvec box_max,
+               Tscal mtot) {
                 return self.make_modifier_apply_stretch_mapping(
-                    parent, tabrho, tabx, system, axis, {box_min, box_max});
+                    parent, tabrho, tabx, system, axis, {box_min, box_max}, mtot);
             },
             py::kw_only(),
             py::arg("parent"),
@@ -453,7 +454,8 @@ void add_instance(py::module &m, std::string name_config, std::string name_model
             py::arg("system"),
             py::arg("axis"),
             py::arg("box_min"),
-            py::arg("box_max"))
+            py::arg("box_max"),
+            py::arg("mtot"))
         .def(
             "make_modifier_filter",
             [](TSPHSetup &self,
