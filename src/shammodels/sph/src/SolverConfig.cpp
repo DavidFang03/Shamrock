@@ -27,6 +27,7 @@ namespace shammodels::sph {
         pdl.add_field<Tvec>("axyz", 1);
         pdl.add_field<Tvec>("axyz_ext", 1);
         pdl.add_field<Tscal>("hpart", 1);
+        pdl.add_field<Tscal>("pressure", 1);
 
         if (track_particles_id) {
             pdl.add_field<u64>("part_id", 1);
