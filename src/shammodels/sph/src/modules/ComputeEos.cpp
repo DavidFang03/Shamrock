@@ -433,7 +433,7 @@ void shammodels::sph::modules::ComputeEos<Tvec, SPHKernel>::compute_eos_internal
             UnitSystem<Tscal> unit2{
                 si.template get<units::second>() / 1e-3,
                 si.template get<units::metre>() * (ctes_si.c() * second / 1e-3),
-                si.template get<units::kilogramm>() * (ctes_si.electron_mass()),
+                si.template get<units::kilogramm>() * (ctes_si.electron_mass() * 1e10),
             };
             Tscal mass
                 = unit_sys.template to<units::kilogramm>() * unit2.template get<units::kilogramm>();
@@ -441,6 +441,8 @@ void shammodels::sph::modules::ComputeEos<Tvec, SPHKernel>::compute_eos_internal
                 = unit_sys.template to<units::metre>() * unit2.template get<units::metre>();
             Tscal time
                 = unit_sys.template to<units::second>() * unit2.template get<units::second>();
+
+            shamlog_debug_ln("CONSTANTS ??", mass, length, time);
 
             Tscal betaunit      = mass / length / (time * time); // pressure
             Tscal density_unit  = mass / (length * length * length);
@@ -466,8 +468,8 @@ void shammodels::sph::modules::ComputeEos<Tvec, SPHKernel>::compute_eos_internal
                     using namespace shamrock::sph;
                     Tscal rho_a    = rho(i);
                     auto const res = EOS::pressure_and_soundspeed(mu_e, rho_a, unit2);
-                    P[i]           = res.pressure / betaunit;
-                    cs[i]          = res.soundspeed / alphabetaunit;
+                    P[i]           = res.pressure * betaunit;
+                    cs[i]          = res.soundspeed * alphabetaunit;
                     // coeff_p and coeff_fp are in SI and have respectively
                     // density**{-1/3} and pressure dimensions
                 });
