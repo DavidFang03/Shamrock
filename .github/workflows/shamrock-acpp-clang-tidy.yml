@@ -112,9 +112,6 @@ jobs:
           ansi2html < clang-tidy.log > clang-tidy.html
 
       - uses: actions/upload-artifact@v4
-        if: >
-          (github.event_name == 'pull_request_target' ||
-            github.event_name == 'pull_request')
         with:
           name: clang-tidy.html
           path: ./clang-tidy.html
