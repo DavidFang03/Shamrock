@@ -163,6 +163,7 @@ namespace shammodels::sph::modules {
         const u32 iuint             = pdl.get_field_idx<Tscal>("uint");
         const u32 iduint            = pdl.get_field_idx<Tscal>("duint");
         const u32 ihpart            = pdl.get_field_idx<Tscal>("hpart");
+        const u32 ipressure         = pdl.get_field_idx<Tscal>("pressure");
         ComputeField<Tscal> density = utility.make_compute_field<Tscal>("rho", 1);
 
         scheduler().for_each_patchdata_nonempty([&](const Patch p, PatchDataLayer &pdat) {
@@ -199,6 +200,7 @@ namespace shammodels::sph::modules {
         if (add_patch_world_id) {
             fnum += 2;
         }
+        fnum++;
         fnum++;
         fnum++;
         fnum++;
@@ -246,6 +248,7 @@ namespace shammodels::sph::modules {
         vtk_dump_add_field<Tscal>(scheduler(), writter, iuint, "u");
         vtk_dump_add_field<Tvec>(scheduler(), writter, ivxyz, "v");
         vtk_dump_add_field<Tvec>(scheduler(), writter, iaxyz, "a");
+        vtk_dump_add_field<Tvec>(scheduler(), writter, ipressure, "pressure");
 
         if (solver_config.has_field_alphaAV()) {
             const u32 ialpha_AV = pdl.get_field_idx<Tscal>("alpha_AV");
