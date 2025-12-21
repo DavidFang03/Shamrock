@@ -12,7 +12,7 @@
 /**
  * @file CGLaplacianStencil.hpp
  * @author Léodasce Sewanou (leodasce.sewanou@ens-lyon.fr)
- * @author Timothée David--Cléris (tim.shamrock@proton.me) --no git blame--
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief  7-point stencil for the discrete Laplacian operator
  *
  */
