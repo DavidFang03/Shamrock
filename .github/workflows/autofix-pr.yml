@@ -55,7 +55,6 @@ jobs:
         uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          path: ${{ github.event.repository.name }}
           commit-message: "[autofix] automatic fix after main branch workflow fail"
           branch: "actions/autofix"
           delete-branch: true
