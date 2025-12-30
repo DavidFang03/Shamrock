@@ -103,9 +103,22 @@ namespace shamphys {
 
     template<class T>
     struct EOS_Tillotson {
+        static constexpr T a = 3.0021e-1; // SI fit parameters that work well for Granite
+        static constexpr T b = -9.5284e2; // SI fit parameters that work well for Granite
+        static constexpr T c = 4.2450e5;  // SI fit parameters that work well for Granite
+        static constexpr T density_unit_earth   = 23093.884200654968;
+        static constexpr T sp_energy_unit_earth = 62522743.68231048;
+
+        static T u_c(T rho) {
+            T rhoa = rho * density_unit_earth;
+            T uc   = a * rhoa * rhoa + b * rhoa + c;
+            return uc / sp_energy_unit_earth;
+        }
 
         static PressureAndCs<T> pressure_and_cs(
-            T rho, T u, T rho0, T E0, T A, T B, T a, T b, T alpha, T beta, T u_iv, T u_cv) {
+            T rho, T uint, T rho0, T E0, T A, T B, T a, T b, T alpha, T beta, T u_iv, T u_cv) {
+
+            T u = uint + u_c(rho);
 
             T eta    = rho / rho0;
             T eta2   = eta * eta;
