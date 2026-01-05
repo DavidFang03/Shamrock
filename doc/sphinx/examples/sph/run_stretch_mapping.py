@@ -21,7 +21,7 @@ import numpy as np
 figsize = (4, 7)
 
 # HCP Lattice properties
-N_target = 200
+N_target = 100
 bsize = 1
 bmin = (-bsize, -bsize, -bsize)
 bmax = (bsize, bsize, bsize)
@@ -88,7 +88,7 @@ def plot_lattice(ax, model, ctx):
     Y = pos[:, 1]
     Z = pos[:, 2]
     sc = ax.scatter(X, Y, Z, c=rho, s=15, vmin=0, vmax=1)
-    fig.colorbar(sc, ax=ax, label=r"$\rho$")
+    fig.colorbar(sc, ax=ax, label=r"$\rho$", location="bottom")
 
 
 def plot_profile(ax, model, ctx):
